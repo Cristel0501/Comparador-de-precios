@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparador de Precios</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        .cheapest {
+            background-color: #d4edda;
+        }
+        .expensive {
+            background-color: #f8d7da;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        button {
+            padding: 5px 10px;
+            margin: 2px;
+            border: none;
+            cursor: pointer;
+        }
+        .edit-button {
+            background-color: #ffc107;
+            color: white;
+        }
+        .delete-button {
+            background-color: #dc3545;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Comparador de Precios</h1>
+        <div class="input-group">
+            <label for="product-name">Nombre del producto:</label>
+            <input type="text" id="product-name" placeholder="Ej. Producto A">
+        </div>
+        <div class="input-group">
+            <label for="cost">Costo (CLP):</label>
+            <input type="number" id="cost" placeholder="Costo en CLP">
+        </div>
+        <div class="input-group">
+            <label for="volume">Volumen:</label>
+            <input type="number" id="volume" placeholder="Volumen">
+            <select id="volume-unit">
+                <option value="ml">ml</option>
+                <option value="l">l</option>
+                <option value="cc">cc</option>
+            </select>
+        </div>
+        <div class="input-group">
+            <label for="weight">Peso:</label>
+            <input type="number" id="weight" placeholder="Peso">
+            <select id="weight-unit">
+                <option value="gr">gr</option>
+                <option value="kg">kg</option>
+            </select>
+        </div>
+        <button onclick="addProduct()">Agregar Producto</button>
+
+        <table id="product-table">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>Costo por Volumen (CLP/ml)</th>
+                    <th>Costo por Peso (CLP/gr)</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Aquí se agregarán los productos -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const volumeConversion = {
+            ml: 1,
+            l: 1000,
+            cc: 1
+        };
+
+        const weightConversion = {
+            gr: 1,
+            kg: 1000
+        };
+
+        let editIndex = -1;
+
+        function convertVolume(volume, unit) {
+            return volume * volumeConversion[unit];
+        }
+
+        function convertWeight(weight, unit) {
+            return weight * weightConversion[unit];
+        }
+
+        function addProduct() {
+            const name = document.getElementById('product-name').value;
+            const cost = parseFloat(document.getElementById('cost').value);
+            const volume = parseFloat(document.getElementById('volume').value);
+            const volumeUnit = document.getElementById('volume-unit').value;
+            const weight = parseFloat(document.getElementById('weight').value);
+            const weightUnit = document.getElementById('weight-unit').value;
+
+            if (!name || isNaN(cost) || (isNaN(volume) && isNaN(weight))) {
+                alert('Por favor, ingrese todos los datos correctamente.');
+                return;
+            }
+
+            const volumeInMl = convertVolume(volume, volumeUnit);
+            const weightInGr = convertWeight(weight, weightUnit);
+            const costPerVolume = cost / volumeInMl;
+            const costPerWeight = cost / weightInGr;
+
+            const table = document.getElementById('product-table').getElementsByTagName('tbody')[0];
+            
+            if (editIndex === -1) {
+                const row = table.insertRow();
+                row.dataset.index = table.rows.length - 1;
+
+                row.insertCell(0).innerText = name;
+                row.insertCell(1).innerText = costPerVolume.toFixed(2);
+                row.insertCell(2).innerText = costPerWeight.toFixed(2);
+
+                const actionCell = row.insertCell(3);
+                const editButton = document.createElement('button');
+                editButton.className = 'edit-button';
+                editButton.innerText = 'Editar';
+                editButton.onclick = () => editProduct(row.dataset.index);
+                actionCell.appendChild(editButton);
+
+                const deleteButton = document.createElement('button');
+                deleteButton.className = 'delete-button';
+                deleteButton.innerText = 'Eliminar';
+                deleteButton.onclick = () => deleteProduct(row);
+                actionCell.appendChild(deleteButton);
+            } else {
+                const row = table.rows[editIndex];
+                row.cells[0].innerText = name;
+                row.cells[1].innerText = costPerVolume.toFixed(2);
+                row.cells[2].innerText = costPerWeight.toFixed(2);
+                editIndex = -1;
+                document.querySelector('button[onclick="addProduct()"]').innerText = 'Agregar Producto';
+            }
+
+            updateTableColors();
+        }
+
+        function editProduct(index) {
+            const row = document.querySelector(`#product-table tbody tr[data-index='${index}']`);
+            document.getElementById('product-name').value = row.cells[0].innerText;
+            document.getElementById('cost').value = row.cells[1].innerText * convertVolume(1, 'ml');
+            document.getElementById('volume').value = row.cells[1].innerText * convertVolume(1, 'ml');
+            document.getElementById('volume-unit').value = 'ml'; // Suponemos que ml es la unidad base
+            document.getElementById('weight').value = row.cells[2].innerText * convertWeight(1, 'gr');
+            document.getElementById('weight-unit').value = 'gr'; // Suponemos que gr es la unidad base
+            editIndex = index;
+            document.querySelector('button[onclick="addProduct()"]').innerText = 'Actualizar Producto';
+        }
+
+        function deleteProduct(row) {
+            const table = document.getElementById('product-table').getElementsByTagName('tbody')[0];
+            table.deleteRow(row.rowIndex);
+            updateTableColors();
+        }
+
+        function updateTableColors() {
+            const rows = document.querySelectorAll('#product-table tbody tr');
+            let minVolumeCost = Infinity;
+            let maxVolumeCost = -Infinity;
+            let minWeightCost = Infinity;
+            let maxWeightCost = -Infinity;
+
+            rows.forEach(row => {
+                const cells = row.getElementsByTagName('td');
+                const costPerVolume = parseFloat(cells[1].innerText);
+                const costPerWeight = parseFloat(cells[2].innerText);
+
+                if (costPerVolume < minVolumeCost) minVolumeCost = costPerVolume;
+                if (costPerVolume > maxVolumeCost) maxVolumeCost = costPerVolume;
+                if (costPerWeight < minWeightCost) minWeightCost = costPerWeight;
+                if (costPerWeight > maxWeightCost) maxWeightCost = costPerWeight;
+            });
+
+            rows.forEach(row => {
+                const cells = row.getElementsByTagName('td');
+                const costPerVolume = parseFloat(cells[1].innerText);
+                const costPerWeight = parseFloat(cells[2].innerText);
+
+                if (costPerVolume === minVolumeCost) {
+                    row.classList.add('cheapest');
+                } else if (costPerVolume === maxVolumeCost) {
+                    row.classList.add('expensive');
+                }
+
+                if (costPerWeight === minWeightCost) {
+                    row.classList.add('cheapest');
+                } else if (costPerWeight === maxWeightCost) {
+                    row.classList.add('expensive');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
